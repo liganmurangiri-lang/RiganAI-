@@ -1,10 +1,9 @@
-
 from flask import Flask
 import os
 app = Flask(__name__)
 @app.route('/')
 def home():
-    return "<h1>RIGAN MARINA V3 - Poa Regan murangiri! ONLINE</h1>"
+    return "<h1>RIGAN MARINA V3 - Poa Regan! ONLINE</h1>"
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
