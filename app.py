@@ -1,91 +1,264 @@
+
 import os
-import requests,
+import requests
+from flask import Flask, request, jsonify, render_template_string
+
 app = Flask(__name__)
-HTML = """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>RiganAI - ChatGPT Style</title><style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,sans-serif}
-body{background:#212121;color:#ececec;display:flex;height:100vh}
-.sidebar{width:260px;background:#171717;padding:12px;display:flex;flex-direction:column;gap:10px}
-.newchat{background:#212121;padding:12px;border-radius:10px;cursor:pointer;border:1px solid #333;text-align:center}
-.newchat:hover{background:#2f2f2f}
-.side-foot{margin-top:auto;font-size:12px;color:#888;padding:10px}
-.main{flex:1;display:flex;flex-direction:column;background:#212121}
-header{padding:16px;text-align:center;border-bottom:1px solid #2f2f2f;font-weight:600}
-header span{color:#ab68ff}
-.chat{flex:1;overflow-y:auto;padding:0}
-.row{padding:24px 0;border-bottom:1px solid #2f2f2f0d}
-.row-inner{max-width:750px;margin:0 auto;display:flex;gap:20px;padding:0 20px}
-.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-.user-av{background:#5436DA} .ai-av{background:#000;border:1px solid #333}
-.text{line-height:1.7;white-space:pre-wrap;font-size:15px}
-.input-area{padding:20px;background:linear-gradient(#21212100,#212121 40%)}
-.input-box{max-width:750px;margin:0 auto;background:#2f2f2f;border-radius:24px;display:flex;align-items:center;padding:8px 12px;gap:10px}
-input{flex:1;background:transparent;border:none;color:#fff;outline:none;padding:10px;font-size:16px}
-button{background:#fff;color:#000;border:none;width:32px;height:32px;border-radius:50%;font-weight:bold;cursor:pointer}
-.welcome{max-width:750px;margin:60px auto;text-align:center}
-.welcome h1{font-size:32px;margin-bottom:10px}
-.welcome p{color:#888}
-.typing{opacity:0.6;font-style:italic}
-@media(max-width:700px){.sidebar{display:none}}
-</style></head><body>
-<div class="sidebar"><div class="newchat" onclick="location.reload()">+ New chat</div><div style="padding:10px;font-size:14px;color:#ccc">RiganAI History</div><div class="side-foot">RIGAN MARINA V5<br>● ONLINE • ChatGPT Mode</div></div>
-<div class="main"><header>RIGAN <span>MARINA</span> V5</header>
-<div class="chat" id="chat"><div class="welcome" id="welcome"><h1>Mambo Regan? 🔥</h1><p>Mimi ni RiganAI, toleo kama ChatGPT. Niulize chochote!</p></div></div>
-<div class="input-area"><div class="input-box"><input id="inp" placeholder="Message RiganAI..." onkeypress="if(event.key==='Enter')send()"><button onclick="send()">↑</button></div></div>
+
+HTML = """
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RIGAN MARINA V5</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #101827;
+  color: white;
+}
+header {
+  padding: 20px;
+  text-align: center;
+  background: #17243a;
+}
+header h2 { margin: 0 0 8px; }
+header p { margin: 0; color: #b8c7dc; }
+#chat {
+  max-width: 700px;
+  margin: auto;
+  padding: 15px;
+  height: 60vh;
+  overflow-y: auto;
+}
+.msg {
+  padding: 12px 15px;
+  border-radius: 14px;
+  margin: 12px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.user { background: #254a79; margin-left: 35px; }
+.ai { background: #202d41; margin-right: 25px; }
+#controls {
+  max-width: 700px;
+  margin: auto;
+  padding: 12px;
+  display: flex;
+  gap: 8px;
+}
+textarea {
+  flex: 1;
+  resize: vertical;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #52637b;
+  background: #17243a;
+  color: white;
+  font-size: 16px;
+}
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: #2878ee;
+  color: white;
+  font-size: 16px;
+}
+button:disabled { opacity: 0.5; }
+#status {
+  text-align: center;
+  color: #b8c7dc;
+  padding: 5px 10px 18px;
+}
+</style>
+</head>
+<body>
+<header>
+  <h2>RIGAN MARINA V5</h2>
+  <p>Msaidizi wako wa AI</p>
+</header>
+
+<div id="chat">
+  <div class="msg ai">Habari! Mimi ni RIGAN MARINA V5.
+  Niulize swali lolote ili tuanze.</div>
 </div>
+
+<div id="controls">
+  <textarea id="question" placeholder="Andika swali lako..."></textarea>
+  <button id="send" onclick="sendMessage()">Tuma</button>
+</div>
+<div id="status">Tayari kuzungumza</div>
+
 <script>
-function addRow(role, txt){
- let welcome=document.getElementById('welcome');if(welcome)welcome.style.display='none';
- let chat=document.getElementById('chat');
- let row=document.createElement('div');row.className='row';
- let inner=document.createElement('div');inner.className='row-inner';
- let av=document.createElement('div');av.className='avatar '+(role==='user'?'user-av':'ai-av');av.innerText=role==='user'?'R':'AI';
- let t=document.createElement('div');t.className='text';t.innerText=txt;
- inner.appendChild(av);inner.appendChild(t);row.appendChild(inner);chat.appendChild(row);chat.scrollTop=chat.scrollHeight;return t;
-}
-async function send(){
- let i=document.getElementById('inp');let txt=i.value.trim();if(!txt)return;
- addRow('user',txt);i.value='';
- let aiDiv=addRow('ai','');aiDiv.className+=' typing';aiDiv.innerText='RiganAI inaandika...';
- let r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:txt})});
- let d=await r.json();aiDiv.classList.remove('typing');aiDiv.innerText=d.reply;
-}
-</script></body></html>"""
+const chat = document.getElementById("chat");
+const input = document.getElementById("question");
+const send = document.getElementById("send");
+const statusText = document.getElementById("status");
+let history = [];
 
-def get_ai_reply(message):
+function addMessage(text, who) {
+  const div = document.createElement("div");
+  div.className = "msg " + who;
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage() {
+  const message = input.value.trim();
+  if (!message || send.disabled) return;
+
+  addMessage(message, "user");
+  input.value = "";
+  send.disabled = true;
+  statusText.textContent = "RIGAN inafikiria...";
+
+  try {
+    const response = await fetch("/chat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        message: message,
+        history: history
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Kuna hitilafu.");
+    }
+
+    addMessage(data.reply, "ai");
+    history.push(
+      {role: "user", content: message},
+      {role: "assistant", content: data.reply}
+    );
+    history = history.slice(-20);
+    statusText.textContent = "RIGAN iko tayari";
+  } catch (error) {
+    addMessage("Samahani: " + error.message, "ai");
+    statusText.textContent = "Jaribu tena";
+  } finally {
+    send.disabled = false;
+    input.focus();
+  }
+}
+
+input.addEventListener("keydown", function(event) {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
+  }
+});
+</script>
+</body>
+</html>
+"""
+
+@app.route("/")
+def home():
+    return render_template_string(HTML)
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok", "app": "RIGAN MARINA V5"})
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    body = request.get_json(silent=True) or {}
+    message = str(body.get("message", "")).strip()
+
+    if not message:
+        return jsonify({"error": "Tafadhali andika swali."}), 400
+
     api_key = os.environ.get("OPENAI_API_KEY")
-
     if not api_key:
-        return "API key haijawekwa kwenye server."
+        return jsonify({
+            "error": "OPENAI_API_KEY haijawekwa kwenye Render Environment."
+        }), 500
+
+    messages = [{
+        "role": "system",
+        "content": (
+            "You are RIGAN MARINA V5, a helpful AI assistant. "
+            "Answer the user's actual question directly and accurately. "
+            "Give clear explanations and examples when useful. "
+            "Respond in the language used by the user, including Swahili. "
+            "Do not merely repeat the user's question."
+        )
+    }]
+
+    history = body.get("history", [])
+    if isinstance(history, list):
+        for item in history[-20:]:
+            if not isinstance(item, dict):
+                continue
+            role = item.get("role")
+            content = item.get("content")
+            if role in ("user", "assistant") and isinstance(content, str):
+                messages.append({
+                    "role": role,
+                    "content": content[:8000]
+                })
+
+    messages.append({"role": "user", "content": message})
 
     try:
         response = requests.post(
             "https://api.openai.com/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {api_key}",
+                "Authorization": "Bearer " + api_key,
                 "Content-Type": "application/json"
             },
             json={
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are RIGAN MARINA V5, a helpful AI assistant. "
-                            "Answer questions clearly in the language used "
-                            "by the user."
-                        )
-                    },
-                    {"role": "user", "content": message}
-                ]
+                "model": os.environ.get(
+                    "OPENAI_MODEL", "gpt-4o-mini"
+                ),
+                "messages": messages,
+                "temperature": 0.7
             },
             timeout=60
         )
 
-        response.raise_for_status()
-        data = response.json()
-        return data["choices"][0]["message"]["content"].strip()
+        if not response.ok:
+            print("OpenAI API error:", response.status_code, response.text[:1000])
+            if response.status_code == 401:
+                error = "API key haikubalika. Kagua key kwenye Render."
+            elif response.status_code == 429:
+                error = "API imekataa ombi. Kagua salio, matumizi au kikomo cha API."
+            else:
+                error = "Huduma ya AI imeleta hitilafu. Kagua Render Logs."
+            return jsonify({"error": error}), 502
 
+        data = response.json()
+        reply = data["choices"][0]["message"]["content"].strip()
+
+        if not reply:
+            raise ValueError("Jibu lilikuwa tupu")
+
+        return jsonify({"reply": reply})
+
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "error": "AI imechelewa kujibu. Tafadhali jaribu tena."
+        }), 504
     except requests.exceptions.RequestException:
-        return "Samahani, AI haijaweza kujibu sasa. Jaribu tena baadaye."
+        app.logger.exception("Tatizo la muunganisho wa AI")
+        return jsonify({
+            "error": "Imeshindikana kuwasiliana na huduma ya AI."
+        }), 502
     except (KeyError, IndexError, ValueError):
-        return "Samahani, tumepata hitilafu wakati wa kupata jibu."
+        app.logger.exception("Jibu la AI halikutarajiwa")
+        return jsonify({
+            "error": "Jibu la AI halikuweza kusomwa."
+        }), 502
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
