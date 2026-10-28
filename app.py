@@ -1,8 +1,6 @@
-from flask import Flask, request, jsonify
-import os, datetime, requests, json
-
+import os
+import requests,
 app = Flask(__name__)
-
 HTML = """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>RiganAI - ChatGPT Style</title><style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Inter,sans-serif}
 body{background:#212121;color:#ececec;display:flex;height:100vh}
@@ -53,37 +51,41 @@ async function send(){
 }
 </script></body></html>"""
 
-def get_ai_reply(user_msg):
+def get_ai_reply(message):
     api_key = os.environ.get("OPENAI_API_KEY")
-    if api_key:
-        try:
-            resp = requests.post("https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type":"application/json"},
-                json={"model":"gpt-3.5-turbo","messages":[{"role":"system","content":"Wewe ni RiganAI, AI ya RIGAN MARINA. Ongea Swahili Sheng, uwe mcheshi na msaada."},{"role":"user","content":user_msg}]},
-                timeout=25)
-            return resp.json()['choices'][0]['message']['content']
-        except Exception as e:
-            print(e)
-    m=user_msg.lower()
-    if 'habari' in m or 'mambo' in m or 'poa' in m:
-        return "Poa sana Regan! 🔥 Mimi RiganAI V5 - sasa niko kama ChatGPT! Niko fiti sana. Unataka nikusaidie nini leo? Coding? Biashara? Au idea mpya?"
-    elif 'nani wewe' in m or 'wewe ni nani' in m:
-        return "Mimi ni RiganAI V5, AI ya RIGAN MARINA 🚀. Nimetengenezwa na wewe Regan, na lengo langu ni kuwa kama ChatGPT lakini na style yako! Niko tayari kukusaidia chochote."
-    elif 'tengeneza' in m or 'code' in m or 'jenga' in m:
-        return f"Naweza kukutengenezea! Umeomba: '{user_msg}'. Niambie undani zaidi - unataka website, app, au bot? Mimi RiganAI niko tayari kuku-code sai hii! 💻"
-    elif 'mapenzi' in m or 'mrembo' in m:
-        return "Hehe 😅 mambo ya mapenzi Regan? RiganAI iko hapa kukupa advice kali. Niambie shida iko wapi?"
-    else:
-        return f"Sawa Regan, nimekuelewa: '{user_msg}'\n\nHii ni RiganAI V5 ChatGPT mode! 🧠\n\nNaweza:\n• Kukuandikia code yoyote\n• Kukupa ideas za biashara\n• Kuandika barua, CV, captions\n• Kukufundisha kitu chochote\n\nNiambie tu unataka nini next, nikupe jibu kali kama ChatGPT!"
 
-@app.route('/')
-def home(): return HTML
+    if not api_key:
+        return "API key haijawekwa kwenye server."
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    msg = request.get_json().get('message','')
-    reply = get_ai_reply(msg)
-    return jsonify({"reply": reply})
+    try:
+        response = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are RIGAN MARINA V5, a helpful AI assistant. "
+                            "Answer questions clearly in the language used "
+                            "by the user."
+                        )
+                    },
+                    {"role": "user", "content": message}
+                ]
+            },
+            timeout=60
+        )
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT",10000)))
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"].strip()
+
+    except requests.exceptions.RequestException:
+        return "Samahani, AI haijaweza kujibu sasa. Jaribu tena baadaye."
+    except (KeyError, IndexError, ValueError):
+        return "Samahani, tumepata hitilafu wakati wa kupata jibu."
