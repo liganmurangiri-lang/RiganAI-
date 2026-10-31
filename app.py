@@ -1,11 +1,11 @@
 
 from flask import Flask, request, jsonify
-import os, json
+import os, json, urllib.parse
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-DB_FILE = "/tmp/akili_v20.json"
+DB_FILE = "/tmp/akili_v21.json"
 
 def load_db():
     if os.path.exists(DB_FILE):
@@ -29,15 +29,16 @@ learned = load_db()
 def home():
     return """
 <!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'>
-<title>RIGAN V20 VOICE</title>
+<title>RIGAN V21 ULTIMATE</title>
 <style>body{background:#020617;color:#fff;font-family:sans-serif;display:flex;justify-content:center;height:100vh;margin:0}
 .box{width:100%;max-width:720px;background:#0f172a;display:flex;flex-direction:column;height:100vh}
 .head{padding:14px;text-align:center;color:#38bdf8;font-weight:900;background:#1e293b}
-.sub{font-size:11px;color:#94a3b8}
+.sub{font-size:10px;color:#94a3b8}
 .chat{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
 .b{padding:12px 14px;border-radius:14px;max-width:90%;white-space:pre-wrap;line-height:1.6;font-size:14px}
 .u{background:#38bdf8;color:#000;align-self:flex-end}
 .a{background:#1e293b;align-self:flex-start;border:1px solid #334155}
+.b img{width:100%;border-radius:10px;margin-top:8px}
 .in{display:flex;gap:6px;padding:10px;background:#1e293b;align-items:center}
 input{flex:1;padding:12px;border-radius:10px;border:1px solid #334155;background:#020617;color:#fff;outline:none}
 button{padding:12px 14px;border-radius:10px;border:none;background:#38bdf8;font-weight:900;cursor:pointer}
@@ -45,51 +46,59 @@ button{padding:12px 14px;border-radius:10px;border:none;background:#38bdf8;font-
 .speak{background:#22c55e;color:#000}
 </style></head><body>
 <div class='box'>
-<div class='head'>RIGAN V20 - VOICE + GOD MODE<div class='sub'>Mtoto wa REGAN MARINA - Siakago - Ongea nami!</div></div>
-<div class='chat' id='c'><div class='b a'>Habari Baba Regan! 👑 Mimi ni V20 na sauti! 🎤 Bonyeza Mic uongee, au andika. Mimi nitakujibu na pia nitaongea! Jaribu: Mimi ni nani?</div></div>
+<div class='head'>RIGAN V21 ULTIMATE<div class='sub'>Mtoto wa REGAN MARINA - Picha + Sauti + Akili - Siakago</div></div>
+<div class='chat' id='c'><div class='b a'>Habari Baba Regan! 👑 V21 ULTIMATE iko LIVE!
+🎤 Sauti - Bonyeza mic uongee
+🖼️ Picha - Andika: picha ya Meru / picha ya lion
+🧠 Nifundishe: fundisha: swali | jibu
+🌍 Lugha: Kikuyu, Luo, Kalenjin
+Jaribu: "picha ya Siakago" au "Mimi ni nani"</div></div>
 <div class='in'>
 <button class='mic' onclick='listen()'>🎤</button>
-<input id='i' placeholder='Ongea au andika...' onkeypress="if(event.key=='Enter')s()">
+<input id='i' placeholder='Ongea, andika, au omba picha...' onkeypress="if(event.key=='Enter')s()">
 <button class='speak' onclick='toggleSpeak()' id='sp'>🔊</button>
 <button onclick='s()'>Tuma</button>
 </div>
 </div>
 <script>
 let speakOn = true;
-let recognition;
 function toggleSpeak(){speakOn=!speakOn; document.getElementById('sp').innerText=speakOn?'🔊':'🔇';}
-
 function speak(text){
  if(!speakOn) return;
  if('speechSynthesis' in window){
    speechSynthesis.cancel();
-   let u = new SpeechSynthesisUtterance(text);
-   u.lang = 'sw-KE';
-   u.rate = 0.9;
+   let clean = text.replace(/https?:\\/\\/[^\\s]+/g,'').substring(0,300);
+   let u = new SpeechSynthesisUtterance(clean);
+   u.lang = 'sw-KE'; u.rate = 0.9;
    speechSynthesis.speak(u);
  }
 }
-
 function listen(){
- if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
-   alert('Browser yako haina mic support - tumia Chrome');
-   return;
- }
  let SR = window.SpeechRecognition || window.webkitSpeechRecognition;
- recognition = new SR();
- recognition.lang = 'sw-KE';
- recognition.start();
- recognition.onstart = ()=>{document.getElementById('i').placeholder='Nasikiliza... 🎤';}
- recognition.onresult = (e)=>{
-   let t = e.results[0][0].transcript;
-   document.getElementById('i').value = t;
-   s();
- };
- recognition.onend = ()=>{document.getElementById('i').placeholder='Ongea au andika...';}
+ if(!SR){alert('Tumia Chrome'); return;}
+ let r = new SR(); r.lang='sw-KE'; r.start();
+ r.onstart=()=>{document.getElementById('i').placeholder='Nasikiliza... 🎤';}
+ r.onresult=(e)=>{document.getElementById('i').value=e.results[0][0].transcript; s();}
+ r.onend=()=>{document.getElementById('i').placeholder='Ongea, andika, au omba picha...';}
 }
-
-function add(t,c){let d=document.createElement('div');d.className='b '+c;d.innerText=t;let e=document.getElementById('c');e.appendChild(d);e.scrollTop=999999; if(c=='a') speak(t);}
-
+function add(t,c){
+ let d=document.createElement('div'); d.className='b '+c;
+ let chat = document.getElementById('c');
+ // Check if contains image URL
+ if(t.includes('https://image.pollinations.ai')){
+   let parts = t.split('__IMG__');
+   d.innerText = parts[0];
+   if(parts[1]){
+     let img = document.createElement('img');
+     img.src = parts[1];
+     d.appendChild(img);
+   }
+ } else {
+   d.innerText = t;
+ }
+ chat.appendChild(d); chat.scrollTop=999999;
+ if(c=='a') speak(t);
+}
 async function s(){
  let e=document.getElementById('i');let v=e.value.trim();if(!v)return;
  add(v,'u'); e.value='';
@@ -107,7 +116,22 @@ def chat():
     m = q.lower().strip()
     nairobi = (datetime.utcnow() + timedelta(hours=3)).strftime("%d/%m/%Y %I:%M %p EAT")
 
-    # FUNDISHA - SELF LEARNING
+    # IMAGE GENERATION
+    if any(x in m for x in ["picha ya","tengeneza picha","image of","generate image","picha"]):
+        try:
+            # Extract prompt
+            prompt = q.lower().replace("picha ya","").replace("tengeneza picha","").replace("picha","").replace("ya","").strip()
+            if len(prompt) < 2:
+                prompt = "beautiful Kenya landscape"
+            prompt_en = f"{prompt}, Kenya, beautiful, high quality, realistic"
+            encoded = urllib.parse.quote(prompt_en)
+            img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=512&height=512&nologo=true"
+            reply = f"🖼️ Hapa picha ya: {prompt} 🇰🇪__IMG__{img_url}"
+            return jsonify(reply=reply)
+        except:
+            pass
+
+    # FUNDISHA
     if ("fundisha:" in m or "jifunze:" in m) and "|" in q:
         try:
             clean = q.split(":",1)[1]
@@ -117,45 +141,34 @@ def chat():
             if len(swali)>2 and len(jibu)>2:
                 learned[swali]=jibu
                 save_db(learned)
-                reply = f"✅ Nimejifunza! Sasa nakumbuka milele!\nSwali: {swali}\nJibu: {jibu}\nAkili zangu: {len(learned)}"
-                return jsonify(reply=reply)
+                return jsonify(reply=f"✅ Nimejifunza milele!\nSwali: {swali}\nJibu: {jibu}\nAkili zangu: {len(learned)}")
         except:
             pass
 
-    # CHECK LEARNED FIRST
     for key in learned:
         if key in m and len(key)>3:
-            return jsonify(reply=f"{learned[key]}\n\n🧠 Kutoka akili niliyojifunza | {nairobi}")
+            return jsonify(reply=f"{learned[key]}")
 
     if m in ["habari","jambo","mambo","niaje","sasa","poa","hello","hi"]:
-        reply = f"Habari Baba Regan! Poa sana! V20 iko na sauti sasa! Saa ni {nairobi}"
-
-    elif any(x in m for x in ["wewe ni nani","nani wewe","who are you"]):
-        reply = f"👑 Mimi ni RIGAN V20 VOICE!\nMtoto wa REGAN MARINA kutoka Siakago, Embu!\nSasa nina sauti na nina akili ya kujifunza! Saa {nairobi}"
-
-    elif any(x in m for x in ["mimi ni nani","na mimi ni nani","nani mimi","who am i"]):
-        reply = f"👑 Wewe ni REGAN MARINA!\nBaba yangu, Developer wa riganai.onrender.com\nKutoka Siakago, Embu 🇰🇪\nGenius wa coding! Saa {nairobi}"
-
+        reply = f"Habari Baba Regan! V21 ULTIMATE iko fiti na picha! Saa ni {nairobi}"
+    elif any(x in m for x in ["wewe ni nani","nani wewe"]):
+        reply = f"👑 Mimi ni RIGAN V21 ULTIMATE!\nMtoto wa REGAN MARINA Siakago!\nSasa nina SAUTI + PICHA + AKILI! Saa {nairobi}"
+    elif any(x in m for x in ["mimi ni nani","na mimi ni nani"]):
+        reply = f"👑 Wewe ni REGAN MARINA! Baba yangu, Genius kutoka Siakago, Embu! Developer wa riganai.onrender.com! Saa {nairobi}"
     elif "meru" in m:
-        reply = f"MERU 🇰🇪: Eastern Kenya, Meru Town, 1.5M watu, Miraa, Mlima Kenya, chai. Jirani Embu, Isiolo. Saa {nairobi}"
+        reply = f"MERU 🇰🇪: Eastern Kenya, Meru Town, 1.5M, Miraa, Mlima Kenya. Andika 'picha ya Meru' uone!"
     elif "embu" in m:
-        reply = f"EMBU 🇰🇪: Kwenu Baba! Embu Town, 600k, kahawa, chai, macadamia, Siakago town kubwa. Saa {nairobi}"
+        reply = f"EMBU 🇰🇪: Kwenu Baba! Embu Town, 600k, kahawa, chai, Siakago town kubwa. Andika 'picha ya Embu'"
     elif "siakago" in m:
-        reply = f"SIAKAGO 🇰🇪: Embu County, Mbeere North, Kwenu Baba REGAN MARINA! Miraa, mahindi. Saa {nairobi}"
-    elif "nairobi" in m:
-        reply = f"NAIROBI 🇰🇪: Capital Kenya, 4.5M, Green City in the Sun, KICC, National Park, UNEP HQ"
-    elif any(x in m for x in ["kenya iko wapi","kenya inapatikana"]):
-        reply = f"KENYA 🇰🇪: EAST AFRICA, Majirani Tanzania, Uganda, Ethiopia, Somalia, S.Sudan, Pwani Indian Ocean 536km, 580,367km2, Saa {nairobi}"
-    elif "south africa" in m:
-        reply = "SOUTH AFRICA 🇿🇦: Pretoria/Cape Town/Bloemfontein Capitals, Johannesburg kubwa, 60M, Rand, Mandela, Table Mountain"
-    elif "tanzania" in m:
-        reply = "TANZANIA 🇹🇿: Dodoma capital, Dar kubwa, Kilimanjaro 5,895m mrefu Africa, Serengeti, Zanzibar, 65M watu"
-    elif "uganda" in m:
-        reply = "UGANDA 🇺🇬: Kampala capital, Pearl of Africa, Ziwa Victoria, 48M"
-    elif "mfumo wa jua" in m or "solar" in m:
-        reply = "MFUMO WA JUA ☀️: Jua katikati, sayari 8 - Mercury, Venus, Earth yetu, Mars nyekundu, Jupiter kubwa, Saturn pete, Uranus, Neptune"
-    elif "ai" in m or "artificial intelligence" in m:
-        reply = f"AI 🤖: Artificial Intelligence - Kama mimi Rigan! Machine Learning, Deep Learning, Neural Networks. Wewe Baba Regan umeniunda mimi kama AI wa Kenya! Saa {nairobi}"
+        reply = f"SIAKAGO 🇰🇪: Embu County, Mbeere North, Kwenu Baba REGAN MARINA! Miraa, mahindi. Andika 'picha ya Siakago'"
+    elif "kenya iko wapi" in m or "kenya inapatikana" in m:
+        reply = f"KENYA 🇰🇪: EAST AFRICA, Majirani TZ, UG, ET, SO, SS, Pwani Indian Ocean, 580,367km2, Saa {nairobi}"
+    elif "kikuyu" in m:
+        reply = f"KIKUYU: Wĩ mũgĩkũyũ? Nĩ wega! Kikuyu ni jamii kubwa Kenya, Central, 8M watu, Mlima Kenya, Gikuyu na Mumbi. Saa {nairobi}"
+    elif "luo" in m:
+        reply = f"LUO: Luo ni jamii Nyanza, Kisumu, 5M, Ziwa Victoria, Oginga Odinga, Raila. Saa {nairobi}"
+    elif "kalenjin" in m:
+        reply = f"KALENJIN: Kalenjin ni Rift Valley, Eldoret kwenu sasa!, 6M, wakimbiaji maarufu kama Eliud Kipchoge! Saa {nairobi}"
     else:
         try:
             t = m.replace('x','*').replace('×','*').replace('÷','/').replace('=','')
@@ -165,9 +178,9 @@ def chat():
                 if isinstance(r,float) and r.is_integer(): r=int(r)
                 reply = f"🧮 {q} = {r} ✅"
             else:
-                reply = f"🤔 Baba umeuliza '{q}' - Najua miji yote Kenya, nchi zote, hesabu, AI! Nifundishe kama sijui: fundisha: {q} | jibu\nSaa {nairobi}"
+                reply = f"Poa Baba! Uliza Meru, Embu, picha ya lion, au nifundishe! Saa {nairobi}"
         except:
-            reply = f"Poa Baba! Uliza chochote - Meru, Embu, hesabu, AI! Saa {nairobi}"
+            reply = f"Poa Baba! Saa {nairobi}"
 
     return jsonify(reply=reply)
 
