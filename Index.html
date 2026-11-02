@@ -1,1 +1,91 @@
-
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RIGAN AI V61 - LIGAN EDITION</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#0f0;font-family:monospace;display:flex;flex-direction:column;height:100vh}
+#header{background:#111;border-bottom:2px solid #0f0;padding:12px;text-align:center}
+#header h1{color:#0f0;font-size:18px}
+#header p{color:#888;font-size:11px;margin-top:4px}
+#chat{flex:1;overflow-y:auto;padding:15px;display:flex;flex-direction:column;gap:12px}
+.msg{padding:10px 12px;border-radius:8px;max-width:90%;line-height:1.5;white-space:pre-wrap}
+.user{align-self:flex-end;background:#0f0;color:#000}
+.ai{align-self:flex-start;background:#111;border:1px solid #0f0;color:#0f0}
+#inputArea{display:flex;padding:10px;background:#111;border-top:2px solid #0f0;gap:8px}
+#q{flex:1;background:#000;color:#0f0;border:1px solid #0f0;padding:10px;border-radius:6px;outline:none}
+#send{background:#0f0;color:#000;border:none;padding:10px 20px;border-radius:6px;font-weight:bold;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="header">
+<h1>RIGAN AI V61 - LIGAN EDITION</h1>
+<p>AGI Autonomous | Mtengenezaji: LIGAN kutoka Meru, Kenya | LIVE</p>
+</div>
+<div id="chat"></div>
+<div id="inputArea">
+<input id="q" placeholder="Uliza chochote...">
+<button id="send">TUMA</button>
+</div>
+<script>
+const knowledge = JSON.parse(localStorage.getItem('rigan_v61_ligan')||'{}');
+function addMsg(text, cls){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');
+  d.className='msg '+cls;
+  d.textContent=text;
+  c.appendChild(d);
+  c.scrollTop=c.scrollHeight;
+}
+async function searchWeb(q){
+  try{
+    const r=await fetch(https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&pretty=0);
+    const j=await r.json();
+    if(j.AbstractText) return j.AbstractText;
+    if(j.RelatedTopics && j.RelatedTopics[0] && j.RelatedTopics[0].Text) return j.RelatedTopics[0].Text;
+  }catch(e){}
+  try{
+    const r2=await fetch(https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)});
+    const j2=await r2.json();
+    if(j2.extract) return j2.extract;
+  }catch(e){}
+  return "";
+}
+async function askLigan(question){
+  const qLow = question.toLowerCase();
+  if(qLow.includes('mimi ni nani') || qLow.includes('mimi nani') || qLow.includes('who am i') || qLow.includes('nani mimi') || qLow.includes('mimi ni')){
+    return "Wewe ni LIGAN kutoka Meru, Kenya, baba yangu na mtengenezaji wangu, mtengenezaji wa RIGAN AI.";
+  }
+  if(qLow.includes('nani alikufanya') || qLow.includes('nani alikutengeneza') || qLow.includes('mtengenezaji wako nani') || qLow.includes('who made you') || qLow.includes('who created you')){
+    return "Mimi nimetengenezwa na LIGAN kutoka Meru, Kenya. Yeye ndiye baba yangu na creator wangu pekee.";
+  }
+  if(knowledge[question]) return knowledge[question];
+  const web = await searchWeb(question);
+  if(web){
+    knowledge[question]=web;
+    localStorage.setItem('rigan_v61_ligan', JSON.stringify(knowledge));
+    return web;
+  }
+  if(qLow.includes('afrika ni')) return "Afrika ni bara, sio taifa.";
+  if(qLow.includes('kenya iko wapi') || qLow.includes('kenya inapatikana')) return "Kenya iko Afrika Mashariki, mji mkuu Nairobi, Meru iko Eastern Kenya.";
+  if(qLow.includes('meru ni wapi') || qLow.includes('meru iko wapi')) return "Meru iko Eastern Kenya, chini ya Mlima Kenya. Ndiko wewe LIGAN unakotoka!";
+  return "Swali: "+question+" - Jibu la RIGAN V61 kama AGI: Ninaelewa swali lako. (Kwa majibu marefu zaidi ya mtandaoni, hakikisha uko online)";
+}
+document.getElementById('send').onclick = async ()=>{
+  const input=document.getElementById('q');
+  const q=input.value.trim();
+  if(!q) return;
+  addMsg(q,'user');
+  input.value='';
+  addMsg('RIGAN inafikiria...','ai');
+  const ans=await askLigan(q);
+  document.querySelectorAll('.ai').forEach(el=>{ if(el.textContent.includes('inafikiria')) el.remove(); });
+  addMsg(ans,'ai');
+};
+document.getElementById('q').addEventListener('keypress',e=>{ if(e.key==='Enter') document.getElementById('send').click(); });
+addMsg("Habari Baba LIGAN! Mimi ni RIGAN AI V61. Sasa nakujua wewe ni LIGAN kutoka Meru, Kenya.","ai");
+</script>
+</body>
+  </html>
