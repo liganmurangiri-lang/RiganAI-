@@ -1,0 +1,7 @@
+{
+    "robot_name": "RIGAN ROBOT",
+    "position_x": 0,
+    "position_y": 1,
+    "direction": "NORTH",
+    "status": "MOVING"
+}
